@@ -19,7 +19,7 @@ sudo apt update && sudo apt upgrade -y
 ### 2️⃣ Cloner le dépôt  
 ```bash
 sudo apt install git-all -y
-sudo git clone https://github.com/Vapotank/BLUE-TEAM-SDV
+sudo git clone https://github.com/Vapotank/BLUE-TEAM-SDV/tree/main/Honeypot_Deployment
 cd BLUE-TEAM-SDV
 ```
 
@@ -121,7 +121,7 @@ sudo rm -rf /opt/cowrie /var/log/suricata /etc/fail2ban/jail.local
 ## 🎯 Conclusion
 
 Votre honeypot est désormais déployé et opérationnel ! Surveillez régulièrement les journaux pour détecter toute activité suspecte et mettez à jour les règles périodiquement.  
-Pour contribuer ou signaler un problème, veuillez soumettre une pull request ou ouvrir une issue sur [GitHub](https://github.com/Vapotank/BLUE-TEAM-SDV).
+Pour contribuer ou signaler un problème, veuillez soumettre une pull request ou ouvrir une issue sur [GitHub](https://github.com/Vapotank/BLUE-TEAM-SDV/tree/main/Honeypot_Deployment).
 
 ---
 
@@ -145,7 +145,7 @@ sudo apt update && sudo apt upgrade -y
 ### 2️⃣ Clone the Repository  
 ```bash
 sudo apt install git-all -y
-sudo git clone https://github.com/Vapotank/BLUE-TEAM-SDV
+sudo git clone https://github.com/Vapotank/BLUE-TEAM-SDV/tree/main/Honeypot_Deployment
 cd BLUE-TEAM-SDV
 ```
 
@@ -247,5 +247,5 @@ sudo rm -rf /opt/cowrie /var/log/suricata /etc/fail2ban/jail.local
 ## 🎯 Conclusion
 
 Your honeypot is now deployed and running! Monitor the logs regularly for suspicious activity and update the rules periodically.  
-For contributions or issues, please submit a pull request or open an issue on [GitHub](https://github.com/Vapotank/BLUE-TEAM-SDV).
+For contributions or issues, please submit a pull request or open an issue on [GitHub](https://github.com/Vapotank/BLUE-TEAM-SDV/tree/main/Honeypot_Deployment).
 
