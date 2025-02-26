@@ -12,7 +12,7 @@ NC='\033[0m'  # No Color
 LOG_FILE="/var/log/ansible_manage.log"
 touch "$LOG_FILE" || { echo -e "${RED}Impossible de créer le fichier de log $LOG_FILE${NC}"; exit 1; }
 
-# Fonction de gestion d'erreur détaillée
+# Fonction de gestion d'erreur personnalisée
 error_handler() {
     local exit_code=$?
     local line_no=${BASH_LINENO[0]}
@@ -111,7 +111,7 @@ status() {
     fi
 }
 
-# Fonction pour exécuter un playbook Ansible
+# Fonction pour exécuter un playbook via un chemin complet
 run_playbook() {
     echo -e "${BLUE}Exécution d'un playbook Ansible...${NC}"
     read -p "Entrez le chemin complet du playbook : " playbook
@@ -120,6 +120,37 @@ run_playbook() {
         return 1
     fi
     ansible-playbook "$playbook" | tee -a "$LOG_FILE"
+}
+
+# Fonction pour rechercher des playbooks dans un répertoire et les exécuter
+search_and_run_playbook() {
+    echo -e "${BLUE}Recherche de playbooks...${NC}"
+    read -p "Entrez le répertoire de recherche (appuyez sur Entrée pour le répertoire courant) : " search_dir
+    search_dir=${search_dir:-.}
+    if [ ! -d "$search_dir" ]; then
+        echo -e "${RED}Le répertoire $search_dir n'existe pas.${NC}"
+        return 1
+    fi
+    # Rechercher les fichiers .yml et .yaml
+    readarray -t playbooks < <(find "$search_dir" -type f \( -iname "*.yml" -o -iname "*.yaml" \))
+    if [ ${#playbooks[@]} -eq 0 ]; then
+        echo -e "${RED}Aucun playbook trouvé dans $search_dir.${NC}"
+        return 1
+    fi
+
+    echo -e "${YELLOW}Playbooks trouvés dans $search_dir :${NC}"
+    for i in "${!playbooks[@]}"; do
+        echo -e "$((i+1))) ${playbooks[$i]}"
+    done
+
+    read -p "Choisissez un playbook à exécuter (1-${#playbooks[@]}) : " choice
+    if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt ${#playbooks[@]} ]; then
+        echo -e "${RED}Choix invalide. Annulation de l'exécution.${NC}"
+        return 1
+    fi
+    selected_playbook=${playbooks[$((choice-1))]}
+    echo -e "${GREEN}Exécution du playbook : ${selected_playbook}${NC}"
+    ansible-playbook "$selected_playbook" | tee -a "$LOG_FILE"
 }
 
 # Fonction pour visualiser les logs
@@ -137,13 +168,11 @@ description() {
     echo -e "${BLUE}Description du script:${NC}"
     cat <<EOF
 Ce script interactif permet de gérer l'installation, la maintenance et le suivi d'Ansible sur Debian 12.
-
 Fonctionnalités incluses :
-  - Installation et configuration d'Ansible, incluant la détection interactive de l'interface réseau
-    et la création d'un fichier d'inventaire (/etc/ansible/hosts).
+  - Installation et configuration d'Ansible, incluant la détection interactive de l'interface réseau et la création de /etc/ansible/hosts.
   - Tâches de maintenance : mise à jour du système et vérification des paquets.
-  - Affichage de l'état actuel, incluant la version d'Ansible et le contenu du fichier d'inventaire.
-  - Exécution de playbooks Ansible avec enregistrement des logs.
+  - Affichage de l'état actuel, incluant la version d'Ansible et le contenu de l'inventaire.
+  - Exécution de playbooks en entrant directement leur chemin ou via une recherche interactive dans un répertoire.
   - Visualisation des logs en temps réel.
 EOF
 }
@@ -155,19 +184,21 @@ main_menu() {
         echo -e "${YELLOW}1) Installer et configurer Ansible"
         echo -e "2) Exécuter des tâches de maintenance"
         echo -e "3) Afficher l'état actuel"
-        echo -e "4) Exécuter un playbook"
-        echo -e "5) Visualiser les logs"
-        echo -e "6) Afficher la description"
-        echo -e "7) Quitter${NC}"
-        read -p "Entrez votre choix [1-7] : " choice
+        echo -e "4) Exécuter un playbook (chemin complet)"
+        echo -e "5) Rechercher et exécuter un playbook"
+        echo -e "6) Visualiser les logs"
+        echo -e "7) Afficher la description"
+        echo -e "8) Quitter${NC}"
+        read -p "Entrez votre choix [1-8] : " choice
         case "$choice" in
             1) install_ansible ;;
             2) maintenance ;;
             3) status ;;
             4) run_playbook ;;
-            5) view_logs ;;
-            6) description ;;
-            7) echo -e "${GREEN}Au revoir !${NC}"; exit 0 ;;
+            5) search_and_run_playbook ;;
+            6) view_logs ;;
+            7) description ;;
+            8) echo -e "${GREEN}Au revoir !${NC}"; exit 0 ;;
             *) echo -e "${RED}Choix invalide, veuillez réessayer.${NC}" ;;
         esac
         echo -e "\nAppuyez sur Entrée pour revenir au menu..."
@@ -187,9 +218,10 @@ else
         maintenance) maintenance ;;
         status) status ;;
         playbook) run_playbook ;;
+        search) search_and_run_playbook ;;
         logs) view_logs ;;
         description) description ;;
-        help) echo "Usage: $0 [install|maintenance|status|playbook|logs|description|help]" ;;
-        *) echo -e "${RED}Commande inconnue.${NC}"; echo "Usage: $0 [install|maintenance|status|playbook|logs|description|help]"; exit 1 ;;
+        help) echo "Usage: $0 [install|maintenance|status|playbook|search|logs|description|help]" ;;
+        *) echo -e "${RED}Commande inconnue.${NC}"; echo "Usage: $0 [install|maintenance|status|playbook|search|logs|description|help]"; exit 1 ;;
     esac
 fi
