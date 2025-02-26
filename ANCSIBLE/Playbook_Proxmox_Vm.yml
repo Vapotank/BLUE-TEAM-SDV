@@ -1,0 +1,53 @@
+---
+- name: Déploiement rapide sur Proxmox
+  hosts: localhost
+  gather_facts: false
+  vars:
+    # Adresse ou nom du serveur Proxmox
+    proxmox_host: "192.168.1.100"  
+    # Utilisateur API (par défaut, root@pam)
+    api_user: "root@pam"  
+    # Mot de passe pour l'utilisateur API
+    api_password: "votre_mot_de_passe"  
+    # Nom du nœud sur lequel créer la VM (doit correspondre à l'interface Proxmox)
+    node: "node1"  
+    # Identifiant unique de la VM
+    vmid: 101  
+    # Nom de la machine virtuelle
+    hostname: "vm101"  
+    # Nombre de cœurs CPU à allouer
+    cores: 2  
+    # Mémoire en mégaoctets
+    memory: 2048  
+    # Taille du disque virtuel
+    disk_size: "10G"  
+    # Chemin vers l'image ISO (vérifiez que l'ISO existe sur le stockage Proxmox)
+    iso: "local:iso/debian-12.iso"  
+  tasks:
+    - name: Créer une nouvelle VM sur Proxmox
+      community.general.proxmox:
+        api_host: "{{ proxmox_host }}"
+        api_user: "{{ api_user }}"
+        api_password: "{{ api_password }}"
+        node: "{{ node }}"
+        vmid: "{{ vmid }}"
+        hostname: "{{ hostname }}"
+        cores: "{{ cores }}"
+        memory: "{{ memory }}"
+        disk_size: "{{ disk_size }}"
+        iso: "{{ iso }}"
+        state: present
+      delegate_to: localhost
+
+    - name: Optionnel - Créer un snapshot après création de la VM
+      community.general.proxmox:
+        api_host: "{{ proxmox_host }}"
+        api_user: "{{ api_user }}"
+        api_password: "{{ api_password }}"
+        node: "{{ node }}"
+        vmid: "{{ vmid }}"
+        snapshot: "snapshot_initial"
+        state: snapshot
+      delegate_to: localhost
+
+    # Vous pouvez ajouter d'autres tâches pour la gestion de conteneurs ou d'autres opérations via l'API Proxmox
