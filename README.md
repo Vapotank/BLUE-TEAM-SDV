@@ -16,7 +16,7 @@ sudo apt update && sudo apt upgrade -y
 ```bash
 sudo apt install git-all -y
 sudo git clone https://github.com/Vapotank/BLUE-TEAM-SDV
-cd honeypot-deploy
+cd BLUE-TEAM-SDV
 ```
 
 ### 3️⃣ Set execution permissions
