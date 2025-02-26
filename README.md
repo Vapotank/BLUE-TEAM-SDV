@@ -19,14 +19,17 @@ Ce projet comprend deux parties principales :
 
 ### **1️⃣ Télécharger et exécuter le script de Monitoring**
 ```bash
-wget https://github.com/Vapotank/BLUE-TEAM-SDV/blob/main/Prometheus_Grafana/install_Prometheus_Grafana.sh -O install_Prometheus_Grafana.sh
+sudo git clone https://github.com/Vapotank/BLUE-TEAM-SDV
+cd BLUE-TEAM-SDV/Prometheus_Grafana
 chmod +x install_Prometheus_Grafana.sh
 sudo ./install_Prometheus_Grafana.sh
 ```
 
 ### **2️⃣ Télécharger et exécuter le script de déploiement du Honeypot**
 ```bash
-wget https://github.com/Vapotank/BLUE-TEAM-SDV/tree/main/Honeypot_Deployment -O install_hony.sh
+sudo apt install git-all -y
+sudo git clone https://github.com/Vapotank/BLUE-TEAM-SDV
+cd BLUE-TEAM-SDV/Honeypot_Deployment/
 chmod +x install_hony.sh
 sudo ./install_hony.sh
 ```
