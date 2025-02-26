@@ -1,163 +1,195 @@
 #!/bin/bash
 set -euo pipefail
 
-# Fonction de gestion d'erreur personnalisée
+# Définition des couleurs pour l'affichage
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'  # No Color
+
+# Chemin du fichier de log
+LOG_FILE="/var/log/ansible_manage.log"
+touch "$LOG_FILE" || { echo -e "${RED}Impossible de créer le fichier de log $LOG_FILE${NC}"; exit 1; }
+
+# Fonction de gestion d'erreur détaillée
 error_handler() {
     local exit_code=$?
     local line_no=${BASH_LINENO[0]}
     local cmd="${BASH_COMMAND}"
-    echo "ERREUR: La commande '${cmd}' a échoué à la ligne ${line_no} avec le code ${exit_code}" >&2
+    echo -e "${RED}ERREUR: La commande '${cmd}' a échoué à la ligne ${line_no} avec le code ${exit_code}.${NC}" >&2
     exit $exit_code
 }
-
 trap error_handler ERR
 
-# Fonction d'affichage de l'aide
-usage() {
-    cat <<EOF
-Usage: $0 <command>
-
-Commandes disponibles :
-  install       - Installe et configure Ansible (mise à jour, détection d'interface, création de /etc/ansible/hosts)
-  description   - Affiche la description et les fonctionnalités du script.
-  maintenance   - Exécute les tâches de maintenance (mise à jour du système et vérification des paquets).
-  status        - Affiche l'état actuel d'Ansible et du fichier d'inventaire.
-  help          - Affiche ce message d'aide.
-EOF
-}
-
-# Vérifier qu'un argument a été fourni
-if [ $# -eq 0 ]; then
-    usage
-    exit 1
-fi
-
-COMMAND="$1"
-shift
-
-case "$COMMAND" in
-    help)
-        usage
-        exit 0
-        ;;
-    description)
-        cat <<EOF
-Description du script :
-Ce script a pour but d'installer et configurer Ansible sur une machine Debian 12.
-Il effectue les opérations suivantes :
-  - Mise à jour du système et installation des paquets nécessaires.
-  - Installation d'Ansible.
-  - Détection des interfaces réseau actives avec affichage de leur adresse IP.
-  - Sélection interactive de l'interface réseau si plusieurs sont disponibles.
-  - Création du répertoire /etc/ansible et génération d'un fichier d'inventaire (/etc/ansible/hosts) avec l'adresse IP choisie.
-  - Gestion avancée des erreurs avec messages détaillés pour faciliter le débogage.
-EOF
-        exit 0
-        ;;
-    maintenance)
-        echo "Exécution des tâches de maintenance..."
-        echo "Mise à jour du système..."
-        if ! apt update && apt upgrade -y; then
-            echo "ERREUR: La mise à jour du système a échoué." >&2
-            exit 1
-        fi
-        echo "Vérification des paquets nécessaires..."
-        if ! apt install -y software-properties-common curl iproute2 ansible; then
-            echo "ERREUR: L'installation ou la vérification des paquets a échoué." >&2
-            exit 1
-        fi
-        echo "Tâches de maintenance terminées avec succès."
-        exit 0
-        ;;
-    status)
-        echo "État actuel :"
-        echo "Version d'Ansible installée :"
-        ansible --version || echo "ERREUR: Ansible n'est pas installé."
-        echo ""
-        echo "Contenu du fichier d'inventaire (/etc/ansible/hosts) :"
-        if [ -f /etc/ansible/hosts ]; then
-            cat /etc/ansible/hosts
-        else
-            echo "Le fichier /etc/ansible/hosts n'existe pas."
-        fi
-        exit 0
-        ;;
-    install)
-        echo "Installation et configuration d'Ansible..."
-        echo "Mise à jour du système..."
-        if ! apt update && apt upgrade -y; then
-            echo "ERREUR: La mise à jour du système a échoué." >&2
-            exit 1
-        fi
-
-        echo "Installation des paquets nécessaires..."
-        if ! apt install -y software-properties-common curl iproute2; then
-            echo "ERREUR: L'installation des paquets nécessaires a échoué." >&2
-            exit 1
-        fi
-
-        echo "Installation d'Ansible..."
-        if ! apt install -y ansible; then
-            echo "ERREUR: L'installation d'Ansible a échoué." >&2
-            exit 1
-        fi
-
-        echo "Détection des interfaces réseau actives..."
-        # Récupérer la liste des interfaces possédant une adresse IPv4
-        interfaces=($(ip -o -4 addr show | awk '{print $2}' | sort | uniq))
-        if [ ${#interfaces[@]} -eq 0 ]; then
-            echo "ERREUR: Aucune interface réseau avec une adresse IPv4 détectée." >&2
-            exit 1
-        fi
-
-        declare -A iface_ips
-        for iface in "${interfaces[@]}"; do
-            ip_addr=$(ip -o -4 addr show "$iface" | awk '{print $4}' | cut -d/ -f1)
-            iface_ips["$iface"]=$ip_addr
+# Fonction pour installer et configurer Ansible
+install_ansible() {
+    echo -e "${BLUE}Installation et configuration d'Ansible...${NC}"
+    
+    echo -e "${YELLOW}Mise à jour du système...${NC}"
+    apt update && apt upgrade -y || { echo -e "${RED}La mise à jour du système a échoué.${NC}"; return 1; }
+    
+    echo -e "${YELLOW}Installation des paquets nécessaires...${NC}"
+    apt install -y software-properties-common curl iproute2 || { echo -e "${RED}L'installation des paquets nécessaires a échoué.${NC}"; return 1; }
+    
+    echo -e "${YELLOW}Installation d'Ansible...${NC}"
+    apt install -y ansible || { echo -e "${RED}L'installation d'Ansible a échoué.${NC}"; return 1; }
+    
+    echo -e "${YELLOW}Détection des interfaces réseau actives...${NC}"
+    interfaces=($(ip -o -4 addr show | awk '{print $2}' | sort | uniq))
+    if [ ${#interfaces[@]} -eq 0 ]; then
+        echo -e "${RED}Aucune interface réseau avec une adresse IPv4 détectée.${NC}"
+        return 1
+    fi
+    
+    declare -A iface_ips
+    for iface in "${interfaces[@]}"; do
+        ip_addr=$(ip -o -4 addr show "$iface" | awk '{print $4}' | cut -d/ -f1)
+        iface_ips["$iface"]=$ip_addr
+    done
+    
+    if [ ${#interfaces[@]} -gt 1 ]; then
+        echo -e "${YELLOW}Interfaces détectées :${NC}"
+        for i in "${!interfaces[@]}"; do
+            echo -e "$((i+1))) ${interfaces[$i]} : ${iface_ips[${interfaces[$i]}]}"
         done
-
-        if [ ${#interfaces[@]} -gt 1 ]; then
-            echo "Interfaces détectées :"
-            for i in "${!interfaces[@]}"; do
-                echo "$((i+1))) ${interfaces[$i]} : ${iface_ips[${interfaces[$i]}]}"
-            done
-            read -p "Choisissez une interface (1-${#interfaces[@]}) : " choice
-            if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt ${#interfaces[@]} ]; then
-                echo "ERREUR: Choix invalide. Arrêt du script." >&2
-                exit 1
-            fi
-            INTERFACE=${interfaces[$((choice-1))]}
-        else
-            INTERFACE=${interfaces[0]}
-            echo "Interface unique détectée : $INTERFACE : ${iface_ips[$INTERFACE]}"
+        read -p "Choisissez une interface (1-${#interfaces[@]}) : " choice
+        if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt ${#interfaces[@]} ]; then
+            echo -e "${RED}Choix invalide. Annulation de l'installation.${NC}"
+            return 1
         fi
-
-        IP=${iface_ips[$INTERFACE]}
-        echo "Interface sélectionnée : $INTERFACE"
-        echo "Adresse IP détectée : $IP"
-
-        echo "Création du répertoire /etc/ansible (si inexistant)..."
-        if ! mkdir -p /etc/ansible; then
-            echo "ERREUR: Échec de la création du répertoire /etc/ansible." >&2
-            exit 1
-        fi
-
-        echo "Création du fichier d'inventaire /etc/ansible/hosts..."
-        if ! cat <<EOF > /etc/ansible/hosts
+        INTERFACE=${interfaces[$((choice-1))]}
+    else
+        INTERFACE=${interfaces[0]}
+        echo -e "${YELLOW}Interface unique détectée : $INTERFACE : ${iface_ips[$INTERFACE]}${NC}"
+    fi
+    
+    IP=${iface_ips[$INTERFACE]}
+    echo -e "${GREEN}Interface sélectionnée : $INTERFACE, Adresse IP : $IP${NC}"
+    
+    echo -e "${YELLOW}Création du répertoire /etc/ansible (si inexistant)...${NC}"
+    mkdir -p /etc/ansible || { echo -e "${RED}Échec de la création du répertoire /etc/ansible.${NC}"; return 1; }
+    
+    echo -e "${YELLOW}Création du fichier d'inventaire /etc/ansible/hosts...${NC}"
+    cat <<EOF > /etc/ansible/hosts
 [local]
 $IP ansible_connection=local
 EOF
-        then
-            echo "ERREUR: Échec de la création du fichier d'inventaire." >&2
-            exit 1
-        fi
+    echo -e "${GREEN}Installation et configuration d'Ansible terminées avec succès.${NC}"
+    echo "Installation réussie à $(date)" >> "$LOG_FILE"
+}
 
-        echo "Installation et configuration d'Ansible terminées avec succès."
-        exit 0
-        ;;
-    *)
-        echo "ERREUR: Commande inconnue '$COMMAND'." >&2
-        usage
-        exit 1
-        ;;
-esac
+# Fonction pour exécuter des tâches de maintenance
+maintenance() {
+    echo -e "${BLUE}Exécution des tâches de maintenance...${NC}"
+    
+    echo -e "${YELLOW}Mise à jour du système...${NC}"
+    apt update && apt upgrade -y || { echo -e "${RED}La mise à jour du système a échoué.${NC}"; return 1; }
+    
+    echo -e "${YELLOW}Vérification et réinstallation des paquets nécessaires...${NC}"
+    apt install -y software-properties-common curl iproute2 ansible || { echo -e "${RED}La vérification/réinstallation des paquets a échoué.${NC}"; return 1; }
+    
+    echo -e "${GREEN}Tâches de maintenance terminées avec succès.${NC}"
+    echo "Maintenance effectuée à $(date)" >> "$LOG_FILE"
+}
+
+# Fonction pour afficher le statut d'Ansible et l'inventaire
+status() {
+    echo -e "${BLUE}État actuel d'Ansible et du système :${NC}"
+    echo -e "${YELLOW}Version d'Ansible installée :${NC}"
+    if command -v ansible &>/dev/null; then
+        ansible --version
+    else
+        echo -e "${RED}Ansible n'est pas installé.${NC}"
+    fi
+    
+    echo -e "${YELLOW}Contenu du fichier d'inventaire (/etc/ansible/hosts) :${NC}"
+    if [ -f /etc/ansible/hosts ]; then
+        cat /etc/ansible/hosts
+    else
+        echo -e "${RED}Le fichier /etc/ansible/hosts n'existe pas.${NC}"
+    fi
+}
+
+# Fonction pour exécuter un playbook Ansible
+run_playbook() {
+    echo -e "${BLUE}Exécution d'un playbook Ansible...${NC}"
+    read -p "Entrez le chemin complet du playbook : " playbook
+    if [ ! -f "$playbook" ]; then
+        echo -e "${RED}Le fichier $playbook n'existe pas.${NC}"
+        return 1
+    fi
+    ansible-playbook "$playbook" | tee -a "$LOG_FILE"
+}
+
+# Fonction pour visualiser les logs
+view_logs() {
+    echo -e "${BLUE}Affichage des logs (Ctrl+C pour quitter)...${NC}"
+    if [ -f "$LOG_FILE" ]; then
+        tail -f "$LOG_FILE"
+    else
+        echo -e "${RED}Le fichier de log n'existe pas.${NC}"
+    fi
+}
+
+# Fonction pour afficher une description détaillée du script
+description() {
+    echo -e "${BLUE}Description du script:${NC}"
+    cat <<EOF
+Ce script interactif permet de gérer l'installation, la maintenance et le suivi d'Ansible sur Debian 12.
+
+Fonctionnalités incluses :
+  - Installation et configuration d'Ansible, incluant la détection interactive de l'interface réseau
+    et la création d'un fichier d'inventaire (/etc/ansible/hosts).
+  - Tâches de maintenance : mise à jour du système et vérification des paquets.
+  - Affichage de l'état actuel, incluant la version d'Ansible et le contenu du fichier d'inventaire.
+  - Exécution de playbooks Ansible avec enregistrement des logs.
+  - Visualisation des logs en temps réel.
+EOF
+}
+
+# Fonction principale : Menu interactif
+main_menu() {
+    while true; do
+        echo -e "\n${GREEN}------------------ Menu de Gestion d'Ansible ------------------${NC}"
+        echo -e "${YELLOW}1) Installer et configurer Ansible"
+        echo -e "2) Exécuter des tâches de maintenance"
+        echo -e "3) Afficher l'état actuel"
+        echo -e "4) Exécuter un playbook"
+        echo -e "5) Visualiser les logs"
+        echo -e "6) Afficher la description"
+        echo -e "7) Quitter${NC}"
+        read -p "Entrez votre choix [1-7] : " choice
+        case "$choice" in
+            1) install_ansible ;;
+            2) maintenance ;;
+            3) status ;;
+            4) run_playbook ;;
+            5) view_logs ;;
+            6) description ;;
+            7) echo -e "${GREEN}Au revoir !${NC}"; exit 0 ;;
+            *) echo -e "${RED}Choix invalide, veuillez réessayer.${NC}" ;;
+        esac
+        echo -e "\nAppuyez sur Entrée pour revenir au menu..."
+        read -r
+        clear
+    done
+}
+
+# Lancement du menu interactif si aucun argument n'est fourni
+if [ $# -eq 0 ]; then
+    clear
+    main_menu
+else
+    # Possibilité d'appeler directement une fonction via un argument en ligne de commande
+    case "$1" in
+        install) install_ansible ;;
+        maintenance) maintenance ;;
+        status) status ;;
+        playbook) run_playbook ;;
+        logs) view_logs ;;
+        description) description ;;
+        help) echo "Usage: $0 [install|maintenance|status|playbook|logs|description|help]" ;;
+        *) echo -e "${RED}Commande inconnue.${NC}"; echo "Usage: $0 [install|maintenance|status|playbook|logs|description|help]"; exit 1 ;;
+    esac
+fi
