@@ -28,6 +28,11 @@ sudo chmod +x install_hony.sh
 ```bash
 sudo ./install_hony.sh
 ```
+## 🔍 Verification After Installation
+```bash
+sudo systemctl restart cowrie suricata fail2ban rsyslog
+sudo systemctl status cowrie suricata fail2ban rsyslog
+```
 
 ## 🛠️ Components Installed
 - **Suricata**: Intrusion Detection/Prevention System (IDS/IPS)
