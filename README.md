@@ -1,251 +1,133 @@
+# 🚀 Monitoring et Déploiement de Honeypot avec Prometheus, Grafana et Windows Exporter
 
-# Version Française
-
-# BLUE-TEAM-SDV  
-# Guide de Déploiement du Honeypot
-
-## 📌 Introduction  
-Ce guide décrit comment déployer un honeypot utilisant Suricata, Fail2Ban, Cowrie et Rsyslog sur un système basé sur Debian. Le script d'installation automatise l'installation, la configuration et la vérification des composants requis.  
-**Important :** Pour que tous les services fonctionnent correctement, il est nécessaire de redémarrer les services après l'installation.
-
-## 🚀 Installation
-
-### 1️⃣ Prérequis  
-Assurez-vous que votre système est à jour avant de lancer le script :
-```bash
-sudo apt update && sudo apt upgrade -y
-```
-
-### 2️⃣ Cloner le dépôt  
-```bash
-sudo apt install git-all -y
-sudo git clone https://github.com/Vapotank/BLUE-TEAM-SDV/tree/main/Honeypot_Deployment
-cd BLUE-TEAM-SDV
-```
-
-### 3️⃣ Attribuer les permissions d'exécution  
-```bash
-sudo chmod +x install_hony.sh
-```
-
-### 4️⃣ Exécuter le script d'installation  
-```bash
-sudo ./install_hony.sh
-```
-
-### 5️⃣ Redémarrer les services  
-Une fois l'installation terminée, redémarrez les services pour qu'ils prennent correctement en compte la configuration :
-```bash
-sudo systemctl restart cowrie suricata fail2ban rsyslog
-```
-
-## 🔍 Vérification
-
-Après installation, vérifiez que tous les services fonctionnent correctement :
-
-#### Vérifier les services actifs  
-```bash
-systemctl list-units --type=service --state=running | grep -E "cowrie|suricata|fail2ban|rsyslog"
-```
-
-#### Vérifier l'état des services  
-```bash
-sudo systemctl status cowrie suricata fail2ban rsyslog
-```
-
-#### S'assurer que les services démarrent au démarrage  
-```bash
-systemctl is-enabled cowrie suricata fail2ban rsyslog
-```
-
-#### Consulter les journaux pour détecter des erreurs  
-```bash
-sudo journalctl -u suricata -n 20 --no-pager
-sudo journalctl -u fail2ban -n 20 --no-pager
-sudo journalctl -u rsyslog -n 20 --no-pager
-```
-
-#### Tester la configuration de Suricata  
-```bash
-sudo suricata -T -c /etc/suricata/suricata.yaml
-```
-
-#### Vérifier l'état des règles Fail2Ban  
-```bash
-sudo fail2ban-client status
-```
-
-#### Vérifier l'état d'UFW (si activé)  
-```bash
-sudo ufw status verbose
-```
-
-#### Vérifier les règles IPTables  
-```bash
-sudo iptables -L -v -n
-```
-
-## 🛑 Dépannage
-
-- **Suricata ne démarre pas ?**  
-  - Consultez le journal :  
-    ```bash
-    sudo tail -n 20 /var/log/suricata/suricata.log
-    ```
-  - Vérifiez l'interface réseau configurée dans le fichier :  
-    ```bash
-    grep "interface:" /etc/suricata/suricata.yaml
-    ```
-
-- **Cowrie ne fonctionne pas ?**  
-  - Consultez les journaux :  
-    ```bash
-    sudo journalctl -u cowrie -n 20 --no-pager
-    ```
-
-- **Fail2Ban ne bannit pas d'adresses IP ?**  
-  - Vérifiez le statut du jail SSH :  
-    ```bash
-    sudo fail2ban-client status sshd
-    ```
-
-## 🔄 Désinstallation
-
-Pour supprimer complètement le honeypot :
-```bash
-sudo systemctl stop cowrie suricata fail2ban rsyslog
-sudo apt remove --purge suricata fail2ban -y
-sudo rm -rf /opt/cowrie /var/log/suricata /etc/fail2ban/jail.local
-```
-
-## 🎯 Conclusion
-
-Votre honeypot est désormais déployé et opérationnel ! Surveillez régulièrement les journaux pour détecter toute activité suspecte et mettez à jour les règles périodiquement.  
-Pour contribuer ou signaler un problème, veuillez soumettre une pull request ou ouvrir une issue sur [GitHub](https://github.com/Vapotank/BLUE-TEAM-SDV/tree/main/Honeypot_Deployment).
+Ce projet comprend deux parties principales :
+1. **Monitoring** : Mise en place de Prometheus, Grafana, Node Exporter et Windows Exporter pour surveiller les performances des systèmes Debian et Windows.
+2. **Honeypot Deployment** : Déploiement d'un honeypot pour détecter et analyser les tentatives d'attaques sur le réseau.
 
 ---
 
-# English Version
+## 📌 Prérequis
+- **Serveur Debian** pour Prometheus et Grafana
+- **Serveur Debian** avec Node Exporter installé
+- **Serveur Windows Server** avec Windows Exporter installé
+- **Accès root/administrateur** sur les machines
+- **Accès Internet** pour récupérer les paquets
 
-# BLUE-TEAM-SDV  
-# Honeypot Deployment Guide
+---
 
-## 📌 Introduction  
-This guide explains how to deploy a honeypot using Suricata, Fail2Ban, Cowrie, and Rsyslog on a Debian-based system. The installation script automates the installation, configuration, and verification of required components.  
-**Important:** To ensure proper operation, you must restart the services after installation.
+## ⚙️ Installation automatique (Debian)
 
-## 🚀 Installation
-
-### 1️⃣ Prerequisites  
-Make sure your system is up-to-date before running the installation script:
+### **1️⃣ Télécharger et exécuter le script de Monitoring**
 ```bash
-sudo apt update && sudo apt upgrade -y
+wget https://github.com/Vapotank/BLUE-TEAM-SDV/blob/main/Prometheus_Grafana/install_Prometheus_Grafana.sh -O install_Prometheus_Grafana.sh
+chmod +x install_Prometheus_Grafana.sh
+sudo ./install_Prometheus_Grafana.sh
 ```
 
-### 2️⃣ Clone the Repository  
+### **2️⃣ Télécharger et exécuter le script de déploiement du Honeypot**
 ```bash
-sudo apt install git-all -y
-sudo git clone https://github.com/Vapotank/BLUE-TEAM-SDV/tree/main/Honeypot_Deployment
-cd BLUE-TEAM-SDV
-```
-
-### 3️⃣ Set Execution Permissions  
-```bash
-sudo chmod +x install_hony.sh
-```
-
-### 4️⃣ Run the Installation Script  
-```bash
+wget https://github.com/Vapotank/BLUE-TEAM-SDV/tree/main/Honeypot_Deployment -O install_hony.sh
+chmod +x install_hony.sh
 sudo ./install_hony.sh
 ```
 
-### 5️⃣ Restart the Services  
-After installation, restart the services so that the new configuration takes effect:
+---
+
+## 🔗 **Installation manuelle du Monitoring**
+Si vous préférez une installation manuelle, suivez ces étapes :
+
+### **3️⃣ Installation de Node Exporter sur Debian**
 ```bash
-sudo systemctl restart cowrie suricata fail2ban rsyslog
+cd /tmp
+wget https://github.com/prometheus/node_exporter/releases/latest/download/node_exporter-1.9.0.linux-amd64.tar.gz
+tar xvf node_exporter-1.9.0.linux-amd64.tar.gz
+sudo mv node_exporter-1.9.0.linux-amd64/node_exporter /usr/local/bin/
+sudo chmod +x /usr/local/bin/node_exporter
+```
+Créer un service systemd :
+```bash
+echo "[Unit]
+Description=Node Exporter
+After=network.target
+
+[Service]
+User=root
+ExecStart=/usr/local/bin/node_exporter
+
+[Install]
+WantedBy=multi-user.target" | sudo tee /etc/systemd/system/node_exporter.service
+```
+Démarrer le service :
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable node_exporter
+sudo systemctl start node_exporter
 ```
 
-## 🔍 Verification
+---
 
-After installation, verify that all services are running properly:
+### **4️⃣ Installation de Windows Exporter sur Windows Server**
+Dans **PowerShell (en admin)** :
+```powershell
+choco install prometheus-windows-exporter.install -y
+```
+Créer le service avec les bons collecteurs :
+```powershell
+sc.exe create windows_exporter binPath= "C:\Program Files\windows_exporter\windows_exporter.exe --collectors.enabled cpu,cs,logical_disk,net,os,system,memory,service" start= auto
+Start-Service windows_exporter
+```
+Ouvrir le port 9182 dans le pare-feu :
+```powershell
+New-NetFirewallRule -DisplayName "Windows Exporter" -Direction Inbound -Protocol TCP -LocalPort 9182 -Action Allow
+```
+Vérifier que l’URL `http://<IP_WINDOWS>:9182/metrics` retourne des métriques.
 
-#### Check Active Services  
+---
+
+## 📊 **Intégration avec Grafana**
+### **Ajouter Prometheus comme source de données**
+1. Aller dans **Grafana** (`http://<IP_DEBIAN>:3000`)
+2. **Configuration > Data Sources > Add Data Source**
+3. Sélectionner **Prometheus**, puis entrer l’URL :
+   ```
+   http://localhost:9090
+   ```
+4. **Save & Test** ✅
+
+### **Importer des dashboards Grafana**
+1. Aller dans **Manage > Import**
+2. Utiliser ces IDs :
+   - **Node Exporter (Linux)** : `1860`
+   - **Windows Exporter** : `2129`
+3. Sélectionner Prometheus comme source et valider ✅
+
+---
+
+## 🛡️ **Déploiement d’un Honeypot sur Debian**
+Le honeypot est un leurre qui permet de détecter les tentatives d’intrusion sur un serveur.
+
+### **5️⃣ Installation du Honeypot**
 ```bash
-systemctl list-units --type=service --state=running | grep -E "cowrie|suricata|fail2ban|rsyslog"
+sudo apt update && sudo apt install cowrie -y
+```
+Configurer Cowrie :
+```bash
+sudo cp /etc/cowrie/cowrie.cfg.dist /etc/cowrie/cowrie.cfg
+```
+Démarrer le service Cowrie :
+```bash
+sudo systemctl enable cowrie
+sudo systemctl start cowrie
+```
+Vérifier les logs d’attaques :
+```bash
+sudo tail -f /var/log/cowrie/cowrie.log
 ```
 
-#### Check Service Status  
-```bash
-sudo systemctl status cowrie suricata fail2ban rsyslog
-```
+---
 
-#### Ensure Services Start at Boot  
-```bash
-systemctl is-enabled cowrie suricata fail2ban rsyslog
-```
+## ✅ **Conclusion**
+Ce projet combine **monitoring et détection d’intrusion** avec **Prometheus, Grafana, Node Exporter, Windows Exporter et un Honeypot**. 🎉🚀
 
-#### Check Logs for Errors  
-```bash
-sudo journalctl -u suricata -n 20 --no-pager
-sudo journalctl -u fail2ban -n 20 --no-pager
-sudo journalctl -u rsyslog -n 20 --no-pager
-```
-
-#### Test Suricata Configuration  
-```bash
-sudo suricata -T -c /etc/suricata/suricata.yaml
-```
-
-#### Check Fail2Ban Rules  
-```bash
-sudo fail2ban-client status
-```
-
-#### Check UFW Status (if enabled)  
-```bash
-sudo ufw status verbose
-```
-
-#### Check IPTables Rules  
-```bash
-sudo iptables -L -v -n
-```
-
-## 🛑 Troubleshooting
-
-- **Suricata is not starting?**  
-  - Check the log:
-    ```bash
-    sudo tail -n 20 /var/log/suricata/suricata.log
-    ```
-  - Verify the configured network interface:
-    ```bash
-    grep "interface:" /etc/suricata/suricata.yaml
-    ```
-
-- **Cowrie is not running?**  
-  - Check the logs:
-    ```bash
-    sudo journalctl -u cowrie -n 20 --no-pager
-    ```
-
-- **Fail2Ban is not banning IPs?**  
-  - Check the SSH jail status:
-    ```bash
-    sudo fail2ban-client status sshd
-    ```
-
-## 🔄 Uninstallation
-
-To completely remove the honeypot:
-```bash
-sudo systemctl stop cowrie suricata fail2ban rsyslog
-sudo apt remove --purge suricata fail2ban -y
-sudo rm -rf /opt/cowrie /var/log/suricata /etc/fail2ban/jail.local
-```
-
-## 🎯 Conclusion
-
-Your honeypot is now deployed and running! Monitor the logs regularly for suspicious activity and update the rules periodically.  
-For contributions or issues, please submit a pull request or open an issue on [GitHub](https://github.com/Vapotank/BLUE-TEAM-SDV/tree/main/Honeypot_Deployment).
+Si tu as des questions, n’hésite pas à ouvrir une issue sur GitHub !
 
