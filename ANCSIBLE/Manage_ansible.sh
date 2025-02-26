@@ -75,6 +75,7 @@ install_ansible() {
 [local]
 $IP ansible_connection=local
 EOF
+
     echo -e "${GREEN}Installation et configuration d'Ansible terminées avec succès.${NC}"
     echo "Installation réussie à $(date)" >> "$LOG_FILE"
     echo -e "\nAppuyez sur Entrée pour revenir au menu..."
@@ -185,4 +186,61 @@ view_logs() {
 description() {
     echo -e "${BLUE}Description du script:${NC}"
     cat <<EOF
-Ce script interactif permet de gérer l'installation, la maintenance et 
+Ce script interactif permet de gérer l'installation, la maintenance et le suivi d'Ansible sur Debian 12.
+Fonctionnalités incluses :
+  - Installation et configuration d'Ansible, incluant la détection interactive de l'interface réseau et la création de /etc/ansible/hosts.
+  - Tâches de maintenance : mise à jour du système et vérification des paquets.
+  - Affichage de l'état actuel, incluant la version d'Ansible et le contenu de l'inventaire.
+  - Exécution de playbooks en entrant directement leur chemin ou via une recherche interactive dans un répertoire.
+  - Visualisation des logs en temps réel.
+EOF
+    echo -e "\nAppuyez sur Entrée pour revenir au menu..."
+    read -r
+}
+
+# Fonction principale : Menu interactif
+main_menu() {
+    while true; do
+        echo -e "\n${GREEN}------------------ Menu de Gestion d'Ansible ------------------${NC}"
+        echo -e "${YELLOW}1) Installer et configurer Ansible"
+        echo -e "2) Exécuter des tâches de maintenance"
+        echo -e "3) Afficher l'état actuel"
+        echo -e "4) Exécuter un playbook (chemin complet)"
+        echo -e "5) Rechercher et exécuter un playbook"
+        echo -e "6) Visualiser les logs"
+        echo -e "7) Afficher la description"
+        echo -e "8) Quitter${NC}"
+        read -p "Entrez votre choix [1-8] : " choice
+        case "$choice" in
+            1) install_ansible ;;
+            2) maintenance ;;
+            3) status ;;
+            4) run_playbook ;;
+            5) search_and_run_playbook ;;
+            6) view_logs ;;
+            7) description ;;
+            8) echo -e "${GREEN}Au revoir !${NC}"; exit 0 ;;
+            *) echo -e "${RED}Choix invalide, veuillez réessayer.${NC}" ;;
+        esac
+        clear
+    done
+}
+
+# Lancement du menu interactif si aucun argument n'est fourni
+if [ $# -eq 0 ]; then
+    clear
+    main_menu
+else
+    # Possibilité d'appeler directement une fonction via un argument en ligne de commande
+    case "$1" in
+        install) install_ansible ;;
+        maintenance) maintenance ;;
+        status) status ;;
+        playbook) run_playbook ;;
+        search) search_and_run_playbook ;;
+        logs) view_logs ;;
+        description) description ;;
+        help) echo "Usage: $0 [install|maintenance|status|playbook|search|logs|description|help]" ;;
+        *) echo -e "${RED}Commande inconnue.${NC}"; echo "Usage: $0 [install|maintenance|status|playbook|search|logs|description|help]"; exit 1 ;;
+    esac
+fi

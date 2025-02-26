@@ -23,7 +23,7 @@ Les scripts incluent une gestion avancée des erreurs pour être plus robustes.
    rm -rf BLUE-TEAM-SDV
    sudo git clone https://github.com/Vapotank/BLUE-TEAM-SDV
    cd BLUE-TEAM-SDV/ANCSIBLE/
-   chmod +x install_ansible.sh manage_ansible.sh
+   chmod +x install_ansible.sh Manage_ansible.sh
    ./manage_ansible.sh
 
    ./install_ansible.sh 
