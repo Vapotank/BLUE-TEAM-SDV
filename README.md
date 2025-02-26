@@ -14,13 +14,13 @@ sudo apt update && sudo apt upgrade -y
 
 ### 2️⃣ Clone the repository
 ```bash
-git clone https://github.com/Vapotank/BLUE-TEAM-SDV/blob/main/install_hony.sh
+wget https://github.com/Vapotank/BLUE-TEAM-SDV/blob/main/install_hony.sh
 cd honeypot-deploy
 ```
 
 ### 3️⃣ Set execution permissions
 ```bash
-chmod +x install_hony.sh
+sudo chmod +x install_hony.sh
 ```
 
 ### 4️⃣ Run the installation script
