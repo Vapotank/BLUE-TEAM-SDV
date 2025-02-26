@@ -29,7 +29,7 @@ verify_package() {
     }
 }
 
-# Détection des interfaces réseau compatibles (par ex. eth*, ens*, enp*)
+# Détection des interfaces réseau compatibles (ex. eth*, ens*, enp*)
 interfaces=($(ip -o link show | awk -F': ' '{print $2}' | grep -E '^(eth0|ens|enp)'))
 if [ ${#interfaces[@]} -eq 0 ]; then
     echo "❌ Aucune interface réseau détectée. Vérifiez votre configuration."
@@ -81,9 +81,10 @@ done
 echo "🔹 Vérification et création de l'utilisateur suricata..."
 if ! id "suricata" &>/dev/null; then
     useradd -r -s /usr/sbin/nologin -d /var/lib/suricata suricata
-    groupadd suricata || true
-    usermod -aG suricata suricata
 fi
+# Si le groupe existe déjà, groupadd affichera un avertissement (ceci est normal)
+groupadd suricata 2>/dev/null || true
+usermod -aG suricata suricata
 
 # Configuration de Suricata
 echo "🔹 Configuration de Suricata..."
@@ -91,13 +92,13 @@ mkdir -p /var/log/suricata
 chown -R suricata:suricata /var/log/suricata 2>/dev/null || chown -R root:root /var/log/suricata
 chmod -R 750 /var/log/suricata
 
-# Modification de la configuration de Suricata pour utiliser l'interface sélectionnée
+# Mise à jour de la configuration de Suricata pour utiliser l'interface sélectionnée
 if grep -q 'eth0' /etc/suricata/suricata.yaml; then
     sed -i "s/eth0/$INTERFACE/g" /etc/suricata/suricata.yaml
     echo "🔹 Mise à jour de /etc/suricata/suricata.yaml pour utiliser l'interface $INTERFACE"
 fi
 
-# Vérification des règles Suricata
+# Téléchargement des règles Suricata (si nécessaire)
 if [[ ! -f /etc/suricata/rules/suricata.rules ]]; then
     echo "🔹 Téléchargement des règles Suricata..."
     suricata-update || rollback
@@ -139,8 +140,47 @@ chown syslog:adm /var/log/auth.log 2>/dev/null || chown root:adm /var/log/auth.l
 
 # Installation de Cowrie
 echo "🔹 Installation de Cowrie..."
-useradd -m -s /bin/bash cowrie || true
-su - cowrie -c "git clone https://github.com/cowrie/cowrie.git ~/cowrie && cd ~/cowrie && virtualenv cowrie-env && source cowrie-env/bin/activate && pip install -r requirements.txt && cp cowrie.cfg.dist cowrie.cfg"
+if ! id "cowrie" &>/dev/null; then
+    useradd -m -s /bin/bash cowrie
+fi
+su - cowrie -c "git clone https://github.com/cowrie/cowrie.git ~/cowrie || (cd ~/cowrie && git pull)"
+cd /home/cowrie/cowrie
+virtualenv cowrie-env
+source cowrie-env/bin/activate
+pip install -r requirements.txt
+# Copie du fichier de configuration par défaut
+if [ -f etc/cowrie.cfg.dist ]; then
+    cp etc/cowrie.cfg.dist cowrie.cfg
+elif [ -f cowrie.cfg.dist ]; then
+    cp cowrie.cfg.dist cowrie.cfg
+else
+    echo "⚠️ Fichier de configuration par défaut Cowrie introuvable, veuillez le copier manuellement."
+fi
+
+# Création d'un service systemd pour Cowrie (si le fichier de service existe dans le repo, on le copie, sinon on en crée un basique)
+if [ -f etc/systemd/cowrie.service ]; then
+    cp etc/systemd/cowrie.service /etc/systemd/system/cowrie.service
+else
+    cat <<EOL > /etc/systemd/system/cowrie.service
+[Unit]
+Description=Cowrie SSH Honeypot
+After=network.target
+
+[Service]
+User=cowrie
+Group=cowrie
+WorkingDirectory=/home/cowrie/cowrie
+ExecStart=/home/cowrie/cowrie/bin/cowrie start
+ExecStop=/home/cowrie/cowrie/bin/cowrie stop
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOL
+fi
+systemctl daemon-reload
+systemctl enable cowrie
+systemctl start cowrie
 
 # Activation des services
 SERVICES=("cowrie" "suricata" "fail2ban" "rsyslog")
