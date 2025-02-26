@@ -23,16 +23,33 @@ verify_package() {
     }
 }
 
-# Détection automatique de l'interface réseau
-INTERFACE=$(ip -o link show | awk -F': ' '{print $2}' | grep -E 'eth0|ens|enp' | head -n 1)
-if [[ -z "$INTERFACE" ]]; then
+# Détection des interfaces réseau compatibles (par ex. eth*, ens*, enp*)
+interfaces=($(ip -o link show | awk -F': ' '{print $2}' | grep -E '^(eth0|ens|enp)'))
+if [ ${#interfaces[@]} -eq 0 ]; then
     echo "❌ Aucune interface réseau détectée. Vérifiez votre configuration."
     exit 1
+elif [ ${#interfaces[@]} -eq 1 ]; then
+    INTERFACE="${interfaces[0]}"
+    echo "🔹 Interface détectée automatiquement : $INTERFACE"
+else
+    echo "🔹 Plusieurs interfaces détectées :"
+    for i in "${!interfaces[@]}"; do
+       echo "  [$i] ${interfaces[$i]}"
+    done
+    read -p "Entrez le numéro de l'interface à utiliser (par défaut 0) : " choix
+    if [[ -z "$choix" ]]; then
+         choix=0
+    fi
+    if ! [[ "$choix" =~ ^[0-9]+$ ]] || [ "$choix" -ge ${#interfaces[@]} ]; then
+         echo "❌ Choix invalide."
+         exit 1
+    fi
+    INTERFACE="${interfaces[$choix]}"
+    echo "🔹 Interface sélectionnée : $INTERFACE"
 fi
 
 # Détection automatique de l'adresse IP
 SERVER_IP=$(hostname -I | awk '{print $1}')
-echo "🔹 Interface détectée : $INTERFACE"
 echo "🔹 IP du serveur honeypot détectée : $SERVER_IP"
 
 # Demande des informations du serveur SIEM
@@ -67,8 +84,11 @@ echo "🔹 Configuration de Suricata..."
 mkdir -p /var/log/suricata
 chown -R suricata:suricata /var/log/suricata 2>/dev/null || chown -R root:root /var/log/suricata
 chmod -R 750 /var/log/suricata
+
+# Modification de la configuration de Suricata pour utiliser l'interface sélectionnée
 if grep -q 'eth0' /etc/suricata/suricata.yaml; then
     sed -i "s/eth0/$INTERFACE/g" /etc/suricata/suricata.yaml
+    echo "🔹 Mise à jour de /etc/suricata/suricata.yaml pour utiliser l'interface $INTERFACE"
 fi
 
 # Vérification des règles Suricata
@@ -77,8 +97,7 @@ if [[ ! -f /etc/suricata/rules/suricata.rules ]]; then
     suricata-update || rollback
 fi
 
-# Correction du chemin des règles :
-# Si le fichier a été écrit dans /var/lib/suricata/rules, on crée un lien symbolique dans /etc/suricata/rules.
+# Correction du chemin des règles : création d'un lien symbolique si nécessaire
 if [[ ! -f /etc/suricata/rules/suricata.rules ]] && [[ -f /var/lib/suricata/rules/suricata.rules ]]; then
     echo "🔹 Création d'un lien symbolique pour les règles Suricata..."
     mkdir -p /etc/suricata/rules
