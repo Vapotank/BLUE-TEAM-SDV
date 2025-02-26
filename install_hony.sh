@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
 
+# Vérification que le système est bien Debian
+if [ ! -f /etc/debian_version ]; then
+    echo "Ce script est destiné à être utilisé uniquement sur Debian."
+    exit 1
+fi
+
 # Fichier log
 LOG_FILE="/var/log/honeypot_install.log"
 
