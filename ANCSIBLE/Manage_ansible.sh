@@ -77,6 +77,8 @@ $IP ansible_connection=local
 EOF
     echo -e "${GREEN}Installation et configuration d'Ansible terminées avec succès.${NC}"
     echo "Installation réussie à $(date)" >> "$LOG_FILE"
+    echo -e "\nAppuyez sur Entrée pour revenir au menu..."
+    read -r
 }
 
 # Fonction pour exécuter des tâches de maintenance
@@ -91,6 +93,8 @@ maintenance() {
     
     echo -e "${GREEN}Tâches de maintenance terminées avec succès.${NC}"
     echo "Maintenance effectuée à $(date)" >> "$LOG_FILE"
+    echo -e "\nAppuyez sur Entrée pour revenir au menu..."
+    read -r
 }
 
 # Fonction pour afficher le statut d'Ansible et l'inventaire
@@ -109,6 +113,8 @@ status() {
     else
         echo -e "${RED}Le fichier /etc/ansible/hosts n'existe pas.${NC}"
     fi
+    echo -e "\nAppuyez sur Entrée pour revenir au menu..."
+    read -r
 }
 
 # Fonction pour exécuter un playbook via un chemin complet
@@ -117,9 +123,13 @@ run_playbook() {
     read -p "Entrez le chemin complet du playbook : " playbook
     if [ ! -f "$playbook" ]; then
         echo -e "${RED}Le fichier $playbook n'existe pas.${NC}"
+        echo -e "\nAppuyez sur Entrée pour revenir au menu..."
+        read -r
         return 1
     fi
     ansible-playbook "$playbook" | tee -a "$LOG_FILE"
+    echo -e "\nAppuyez sur Entrée pour revenir au menu..."
+    read -r
 }
 
 # Fonction pour rechercher des playbooks dans un répertoire et les exécuter
@@ -129,12 +139,16 @@ search_and_run_playbook() {
     search_dir=${search_dir:-.}
     if [ ! -d "$search_dir" ]; then
         echo -e "${RED}Le répertoire $search_dir n'existe pas.${NC}"
+        echo -e "\nAppuyez sur Entrée pour revenir au menu..."
+        read -r
         return 1
     fi
     # Rechercher les fichiers .yml et .yaml
     readarray -t playbooks < <(find "$search_dir" -type f \( -iname "*.yml" -o -iname "*.yaml" \))
     if [ ${#playbooks[@]} -eq 0 ]; then
         echo -e "${RED}Aucun playbook trouvé dans $search_dir.${NC}"
+        echo -e "\nAppuyez sur Entrée pour revenir au menu..."
+        read -r
         return 1
     fi
 
@@ -146,11 +160,15 @@ search_and_run_playbook() {
     read -p "Choisissez un playbook à exécuter (1-${#playbooks[@]}) : " choice
     if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt ${#playbooks[@]} ]; then
         echo -e "${RED}Choix invalide. Annulation de l'exécution.${NC}"
+        echo -e "\nAppuyez sur Entrée pour revenir au menu..."
+        read -r
         return 1
     fi
     selected_playbook=${playbooks[$((choice-1))]}
     echo -e "${GREEN}Exécution du playbook : ${selected_playbook}${NC}"
     ansible-playbook "$selected_playbook" | tee -a "$LOG_FILE"
+    echo -e "\nAppuyez sur Entrée pour revenir au menu..."
+    read -r
 }
 
 # Fonction pour visualiser les logs
@@ -167,61 +185,4 @@ view_logs() {
 description() {
     echo -e "${BLUE}Description du script:${NC}"
     cat <<EOF
-Ce script interactif permet de gérer l'installation, la maintenance et le suivi d'Ansible sur Debian 12.
-Fonctionnalités incluses :
-  - Installation et configuration d'Ansible, incluant la détection interactive de l'interface réseau et la création de /etc/ansible/hosts.
-  - Tâches de maintenance : mise à jour du système et vérification des paquets.
-  - Affichage de l'état actuel, incluant la version d'Ansible et le contenu de l'inventaire.
-  - Exécution de playbooks en entrant directement leur chemin ou via une recherche interactive dans un répertoire.
-  - Visualisation des logs en temps réel.
-EOF
-}
-
-# Fonction principale : Menu interactif
-main_menu() {
-    while true; do
-        echo -e "\n${GREEN}------------------ Menu de Gestion d'Ansible ------------------${NC}"
-        echo -e "${YELLOW}1) Installer et configurer Ansible"
-        echo -e "2) Exécuter des tâches de maintenance"
-        echo -e "3) Afficher l'état actuel"
-        echo -e "4) Exécuter un playbook (chemin complet)"
-        echo -e "5) Rechercher et exécuter un playbook"
-        echo -e "6) Visualiser les logs"
-        echo -e "7) Afficher la description"
-        echo -e "8) Quitter${NC}"
-        read -p "Entrez votre choix [1-8] : " choice
-        case "$choice" in
-            1) install_ansible ;;
-            2) maintenance ;;
-            3) status ;;
-            4) run_playbook ;;
-            5) search_and_run_playbook ;;
-            6) view_logs ;;
-            7) description ;;
-            8) echo -e "${GREEN}Au revoir !${NC}"; exit 0 ;;
-            *) echo -e "${RED}Choix invalide, veuillez réessayer.${NC}" ;;
-        esac
-        echo -e "\nAppuyez sur Entrée pour revenir au menu..."
-        read -r
-        clear
-    done
-}
-
-# Lancement du menu interactif si aucun argument n'est fourni
-if [ $# -eq 0 ]; then
-    clear
-    main_menu
-else
-    # Possibilité d'appeler directement une fonction via un argument en ligne de commande
-    case "$1" in
-        install) install_ansible ;;
-        maintenance) maintenance ;;
-        status) status ;;
-        playbook) run_playbook ;;
-        search) search_and_run_playbook ;;
-        logs) view_logs ;;
-        description) description ;;
-        help) echo "Usage: $0 [install|maintenance|status|playbook|search|logs|description|help]" ;;
-        *) echo -e "${RED}Commande inconnue.${NC}"; echo "Usage: $0 [install|maintenance|status|playbook|search|logs|description|help]"; exit 1 ;;
-    esac
-fi
+Ce script interactif permet de gérer l'installation, la maintenance et 
