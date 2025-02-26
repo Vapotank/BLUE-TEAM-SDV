@@ -19,8 +19,8 @@ sudo apt update && sudo apt upgrade -y
 ### 2️⃣ Cloner le dépôt  
 ```bash
 sudo apt install git-all -y
-sudo git clone https://github.com/Vapotank/BLUE-TEAM-SDV/tree/main/Honeypot_Deployment
-cd BLUE-TEAM-SDV
+sudo git clone https://github.com/Vapotank/BLUE-TEAM-SDV
+cd BLUE-TEAM-SDV/Honeypot_Deployment
 ```
 
 ### 3️⃣ Attribuer les permissions d'exécution  

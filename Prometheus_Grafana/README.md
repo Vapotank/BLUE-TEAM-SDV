@@ -18,7 +18,9 @@ Le script `install_Prometheus_Grafana.sh` installe et configure **Prometheus, Gr
 
 ### **1️⃣ Télécharger et exécuter le script**
 ```bash
-wget https://github.com/ton-repo/install_Prometheus_Grafana.sh -O install.sh
+sudo apt install git-all -y
+sudo git clone https://github.com/Vapotank/BLUE-TEAM-SDV
+cd BLUE-TEAM-SDV/Prometheus_Grafana
 chmod +x install.sh
 sudo ./install.sh
 ```
