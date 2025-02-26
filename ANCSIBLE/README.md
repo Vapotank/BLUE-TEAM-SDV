@@ -20,6 +20,7 @@ Les scripts incluent une gestion avancée des erreurs pour être plus robustes.
 ### Utilisation
 1. Rendez les scripts exécutables :
    ```bash
+   rm -rf BLUE-TEAM-SDV
    sudo git clone https://github.com/Vapotank/BLUE-TEAM-SDV
    cd BLUE-TEAM-SDV/ANCSIBLE/
    chmod +x install_ansible.sh manage_ansible.sh
