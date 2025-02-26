@@ -14,7 +14,7 @@ sudo apt update && sudo apt upgrade -y
 
 ### 2️⃣ Clone the repository
 ```bash
-git clone https://github.com/your-repo/honeypot-deploy.git
+git clone https://github.com/Vapotank/BLUE-TEAM-SDV/blob/main/install_hony.sh
 cd honeypot-deploy
 ```
 
