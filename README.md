@@ -15,7 +15,7 @@ sudo apt update && sudo apt upgrade -y
 ### 2️⃣ Clone the repository
 ```bash
 sudo apt install git-all -y
-sudo git clone https://github.com/Vapotank/BLUE-TEAM-SDV/blob/main/install_hony.sh
+sudo git clone https://github.com/Vapotank/BLUE-TEAM-SDV
 cd honeypot-deploy
 ```
 
